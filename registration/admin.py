@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.sites.models import RequestSite
 from django.contrib.sites.models import Site
 from django.utils.translation import ugettext_lazy as _
@@ -13,32 +13,20 @@ class RegistrationAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__first_name', 'user__last_name')
 
     def activate_users(self, request, queryset):
-        """
-        Activates the selected users, if they are not alrady
-        activated.
-        
-        """
         for profile in queryset:
             RegistrationProfile.objects.activate_user(profile.activation_key)
     activate_users.short_description = _("Activate users")
 
     def resend_activation_email(self, request, queryset):
-        """
-        Re-sends activation emails for the selected users.
-
-        Note that this will *only* send activation emails for users
-        who are eligible to activate; emails will not be sent to users
-        whose activation keys have expired or who have already
-        activated.
-        
-        """
         if Site._meta.installed:
             site = Site.objects.get_current()
         else:
             site = RequestSite(request)
 
         for profile in queryset:
-            if not profile.activation_key_expired():
+            if profile.activation_key_expired():
+                messages.error(request,"Cannot resend activation email for expired users")
+            else:
                 profile.send_activation_email(site)
     resend_activation_email.short_description = _("Re-send activation emails")
 

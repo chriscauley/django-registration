@@ -1,0 +1,5 @@
+Welcome to {{ site.name }}! Please follow the following link to complete your account activation:
+
+http://{{ site.domain }}{% url "registration_activate" activation_key %}
+
+This link will only be valid for {{ expiration_days }} days. We look forward to seeing you at the lab.

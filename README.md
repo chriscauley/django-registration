@@ -1,4 +1,9 @@
-.. -*-restructuredtext-*-
+Django Registration
+========
+
+This is a fork of django-registration which I created because I can't stand class based views. It looks like this application has not been updated for over a year so I'm hoping to hijack it in favor of functional views... Fingers crossed.
+
+--------
 
 This is a fairly simple user-registration application for Django,
 designed to make allowing user signups as painless as possible. It

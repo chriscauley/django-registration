@@ -1,0 +1,13 @@
+{% extends "registration/base.html" %}
+
+{% block content %}
+<p>
+  {% if new_user %}
+  Registration successful. Thank you.
+  {% else %}
+  We're sorry.
+  The link you have entered has an invalid or expired activation key.
+  Please try to <a href="{% url "registration_register" %}">register again</a>.
+  {% endif %}
+</p>
+{% endblock %}
