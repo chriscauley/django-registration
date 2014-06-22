@@ -2,11 +2,12 @@
 
 {% block content %}
 <p>
-  {% if new_user %}
-  Registration successful. Thank you.
-  {% else %}
-  We're sorry.
-  The link you have entered has an invalid or expired activation key.
+  {% if success %}
+  Registration successful. You have been logged in.
+  {% elif profile and not success %}
+  We're sorry. The account you have attempted to activate has already been activated.
+  {% elif profile.activation_key_expired %}
+  We're sorry. The link you have entered is invalid or has expired.
   Please try to <a href="{% url "registration_register" %}">register again</a>.
   {% endif %}
 </p>

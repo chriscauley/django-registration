@@ -17,6 +17,8 @@ class RegistrationForm(forms.Form):
     REGISTRATION_UNIQUE_EMAIL - if True, clean_email will validate whether or not a users email is unique
 
     REGISTRATION_NO_FREE_EMAIL - if True, clean email will reject emails using free email services
+
+    REGISTRATION_IGNORE_DOTS - if True, clean email with detect a.b.c@gmail.com as being the same as abc@gmail.com
     """
     required_css_class = 'required'
     _e = {'invalid': _("This value may contain only letters, numbers and @/./+/-/_ characters.")}
@@ -35,10 +37,17 @@ class RegistrationForm(forms.Form):
         return super(RegistrationForm,self).__init__(*args,**kwargs)
 
     def clean_email(self):
+        e = _("This email address is already in use. Please supply a different email address.")
         if getattr(settings,"REGISTRATION_UNIQUE_EMAIL",False):
-            e = _("This email address is already in use. Please supply a different email address.")
             if User.objects.filter(email__iexact=self.cleaned_data['email']):
                 raise forms.ValidationError(e)
+
+        if getattr(settings,"REGISTRATION_IGNORE_DOTS",False):
+            name,domain = self.cleaned_data['email'].split('@')
+            name = name.lower().replace('.','')
+            for user in User.objects.filter(email__istartswith=name[0],email__iendswith=name[1]):
+                if name == user.email.split('@')[0].lower().replace('.',''):                 
+                    raise forms.ValidationError(e)
 
         if getattr(settings,"REGISTRATION_NO_FREE_EMAIL",False):
             bad_domains = ['aim.com', 'aol.com', 'email.com', 'gmail.com',
@@ -49,6 +58,7 @@ class RegistrationForm(forms.Form):
             e = _("Registration using free email addresses is prohibited. Please supply a different email address.")
             if email_domain in bad_domains:
                 raise forms.ValidationError(e)
+
         return self.cleaned_data['email']
 
     def clean_username(self):

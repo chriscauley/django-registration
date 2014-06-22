@@ -21,48 +21,35 @@ try:
 except ImportError:
     datetime_now = datetime.datetime.now
 
-
 SHA1_RE = re.compile('^[a-f0-9]{40}$')
 
-
 class RegistrationManager(models.Manager):
-    def activate_user(self, activation_key):
-        # Make sure the key we're trying conforms to the pattern of a
-        # SHA1 hash; if it doesn't, no point trying to look it up in
-        # the database.
-        if not SHA1_RE.search(activation_key):
-            return False
+    def get_and_activate(self, activation_key):
         try:
             profile = self.get(activation_key=activation_key)
         except self.model.DoesNotExist:
-            return False
+            return None, False
+        if profile.expired() or profile.activated:
+            return profile, False
         user = profile.user
         user.is_active = True
         user.save()
-        profile.delete()
-        return user
-    
+        profile.activated = True
+        profile.save()
+        return profile,user
+
+    @transaction.commit_on_success
     def create_inactive_user(self, username, email, password, site, send_email=True):
         new_user = User.objects.create_user(username, email, password)
         new_user.is_active = False
         new_user.save()
 
-        registration_profile = self.create_profile(new_user)
+        registration_profile = self.create(user=new_user)
 
         if send_email:
             registration_profile.send_activation_email(site)
 
         return new_user
-    create_inactive_user = transaction.commit_on_success(create_inactive_user)
-
-    def create_profile(self, user):
-        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
-        username = user.username
-        if isinstance(username, unicode):
-            username = username.encode('utf-8')
-        activation_key = hashlib.sha1(salt+username).hexdigest()
-        expire_date = datetime_now() + datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
-        return self.create(user=user,activation_key=activation_key,expire_date=expire_date)
 
     def delete_expired_users(self):
         for profile in self.filter(expires__lte=datetime_now()):
@@ -75,25 +62,35 @@ class RegistrationManager(models.Manager):
             profile.delete()
 
 class RegistrationProfile(models.Model):
-    ACTIVATED = u"ALREADY_ACTIVATED"
-    
+    EMPTY_KEY = 'ACTIVATION_KEY'
     user = models.ForeignKey(User, unique=True, verbose_name=_('user'))
-    activation_key = models.CharField(_('activation key'), max_length=40)
+    activation_key = models.CharField(_('activation key'), max_length=40,default=EMPTY_KEY)
     expire_date = models.DateTimeField(null=True,blank=True)
+    activated = models.BooleanField(default=False)
 
     objects = RegistrationManager()
-    
+
     class Meta:
         ordering = ('-id',)
-        verbose_name = _('registration profile')
-        verbose_name_plural = _('registration profiles')
-    
+
     __unicode__ = lambda self: u"Registration information for %s" % self.user
 
-    def activation_key_expired(self):
-        if self.expire_date:
-            return self.expire_date < datetime_now()
-    activation_key_expired.boolean = True
+    expired = lambda self: self.expire_date and self.expire_date < datetime_now()
+    expired.boolean = True
+
+    def save(self,*args,**kwargs):
+        if self.activation_key == self.EMPTY_KEY:
+            self.reset()
+        super(RegistrationProfile,self).save(*args,**kwargs)
+
+    def reset(self):
+        self.expire_date = datetime_now() + datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
+        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+        username = self.user.username
+        if isinstance(username, unicode):
+            username = username.encode('utf-8')
+        self.activation_key = hashlib.sha1(salt+username).hexdigest()
+
     def send_activation_email(self, site):
         ctx_dict = {
             'activation_key': self.activation_key,
@@ -103,7 +100,7 @@ class RegistrationProfile(models.Model):
         subject = render_to_string('registration/activation_email_subject.txt',ctx_dict)
         # Email subject *must not* contain newlines
         subject = ''.join(subject.splitlines())
-        
+
         message = render_to_string('registration/activation_email.txt',ctx_dict)
-        
+
         self.user.email_user(subject, message, settings.DEFAULT_FROM_EMAIL)
