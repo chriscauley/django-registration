@@ -1,11 +1,14 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.sites.models import RequestSite, Site
 from django import forms
+from django.http import HttpRequest
 from django.utils.translation import ugettext_lazy as _
 
 from .models import RegistrationProfile
 
+#! need to test settings
+# view https://docs.djangoproject.com/en/1.6/topics/testing/tools/#overriding-settings
 EXTRA_FIELDS = getattr(settings,"REGISTRATION_EXTRA_FIELDS",['password2'])
 
 class RegistrationForm(forms.Form):
@@ -25,31 +28,34 @@ class RegistrationForm(forms.Form):
     username = forms.RegexField(regex=r'^[\w.@+-]+$',max_length=30,label=_("Username"),error_messages=_e)
     email = forms.EmailField(label=_("E-mail"))
     password1 = forms.CharField(widget=forms.PasswordInput,label=_("Password"))
-    if 'password2' in EXTRA_FIELDS:
+    if 'password2' in EXTRA_FIELDS: #! needs test
         password2 = forms.CharField(widget=forms.PasswordInput,label=_("Password (again)"))
-    if 'tos' in EXTRA_FIELDS:
+    if 'tos' in EXTRA_FIELDS: #! needs test
         tos = forms.BooleanField(widget=forms.CheckboxInput,
                                  label=_(u'I have read and agree to the Terms of Service'),
                                  error_messages={'required': _("You must agree to the terms to register")})
 
     def __init__(self,request,*args,**kwargs):
+        if not isinstance(request,HttpRequest):
+            raise ValueError("The RegistrationForm must take a request as it's first argument")
         self.request = request
         return super(RegistrationForm,self).__init__(*args,**kwargs)
 
     def clean_email(self):
+        User = get_user_model()
         e = _("This email address is already in use. Please supply a different email address.")
-        if getattr(settings,"REGISTRATION_UNIQUE_EMAIL",False):
+        if getattr(settings,"REGISTRATION_UNIQUE_EMAIL",False): #! needs test
             if User.objects.filter(email__iexact=self.cleaned_data['email']):
                 raise forms.ValidationError(e)
 
-        if getattr(settings,"REGISTRATION_IGNORE_DOTS",False):
+        if getattr(settings,"REGISTRATION_IGNORE_DOTS",False): #! needs test
             name,domain = self.cleaned_data['email'].split('@')
             name = name.lower().replace('.','')
             for user in User.objects.filter(email__istartswith=name[0],email__iendswith=name[1]):
                 if name == user.email.split('@')[0].lower().replace('.',''):                 
                     raise forms.ValidationError(e)
 
-        if getattr(settings,"REGISTRATION_NO_FREE_EMAIL",False):
+        if getattr(settings,"REGISTRATION_NO_FREE_EMAIL",False): #! needs test
             bad_domains = ['aim.com', 'aol.com', 'email.com', 'gmail.com',
                            'googlemail.com', 'hotmail.com', 'hushmail.com',
                            'msn.com', 'mail.ru', 'mailinator.com', 'live.com',
@@ -62,6 +68,7 @@ class RegistrationForm(forms.Form):
         return self.cleaned_data['email']
 
     def clean_username(self):
+        User = get_user_model()
         if User.objects.filter(username__iexact=self.cleaned_data['username']):
             raise forms.ValidationError(_("A user with that username already exists."))
         return self.cleaned_data['username']

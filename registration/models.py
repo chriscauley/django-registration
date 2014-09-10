@@ -4,17 +4,12 @@ import random
 import re
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
-try:
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-except ImportError:
-    from django.contrib.auth.models import User
 
 try:
     from django.utils.timezone import now as datetime_now
@@ -40,6 +35,7 @@ class RegistrationManager(models.Manager):
 
     @transaction.commit_on_success
     def create_inactive_user(self, username, email, password, site, send_email=True):
+        User = get_user_model()
         new_user = User.objects.create_user(username, email, password)
         new_user.is_active = False
         new_user.save()
@@ -52,6 +48,7 @@ class RegistrationManager(models.Manager):
         return new_user
 
     def delete_expired_users(self):
+        User = get_user_model()
         for profile in self.filter(expires__lte=datetime_now()):
             try:
                 user = profile.user
@@ -63,7 +60,7 @@ class RegistrationManager(models.Manager):
 
 class RegistrationProfile(models.Model):
     EMPTY_KEY = 'ACTIVATION_KEY'
-    user = models.ForeignKey(User, unique=True, verbose_name=_('user'))
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, unique=True, verbose_name=_('user'))
     activation_key = models.CharField(_('activation key'), max_length=40,default=EMPTY_KEY)
     expire_date = models.DateTimeField(null=True,blank=True)
     activated = models.BooleanField(default=False)
