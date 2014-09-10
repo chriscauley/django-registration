@@ -20,7 +20,6 @@ SHA1_RE = re.compile('^[a-f0-9]{40}$')
 
 class RegistrationManager(models.Manager):
     def get_and_activate(self, activation_key):
-        print activation_key
         try:
             profile = self.get(activation_key=activation_key)
         except self.model.DoesNotExist:

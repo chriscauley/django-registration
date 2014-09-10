@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
@@ -5,7 +7,6 @@ from django.template.response import TemplateResponse
 
 from .forms import RegistrationForm
 from .models import RegistrationProfile
-from db.utils import get_or_none
 
 def register(request,form=RegistrationForm):
     form = form(request,request.POST or None)
