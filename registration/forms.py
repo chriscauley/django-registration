@@ -51,7 +51,8 @@ class RegistrationForm(forms.Form):
         if getattr(settings,"REGISTRATION_IGNORE_DOTS",False): #! needs test
             name,domain = self.cleaned_data['email'].split('@')
             name = name.lower().replace('.','')
-            for user in User.objects.filter(email__istartswith=name[0],email__iendswith=name[1]):
+            for user in User.objects.filter(email__iendswith=domain):
+                print name,"\t", user.email.split('@')[0].lower().replace('.','')
                 if name == user.email.split('@')[0].lower().replace('.',''):                 
                     raise forms.ValidationError(e)
 

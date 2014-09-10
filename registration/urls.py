@@ -3,7 +3,6 @@ from django.views.generic.base import TemplateView
 
 urlpatterns = patterns(
   'registration.views',
-  #url(r'^activate/complete/$','complete',name='registration_activation_complete'),
   url(r'^activate/(\w+)/$','activate',name='registration_activate'),
   url(r'^register/$','register',name='registration_register'),
   url(r'^register/complete/$',
