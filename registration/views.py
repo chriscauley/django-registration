@@ -21,8 +21,10 @@ def activate(request,activation_key):
         user = profile.user
         user.backend='django.contrib.auth.backends.ModelBackend'
         login(request,user)
+        m = "Welcome %s. Your account has been activated and you have been logged in."%user
+        messages.success(request,m)
+        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
     values = {
         'profile': profile,
-        'activated': activated,
     }
     return TemplateResponse(request,'registration/activate.html',values)
