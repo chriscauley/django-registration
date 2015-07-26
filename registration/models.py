@@ -33,7 +33,7 @@ class RegistrationManager(models.Manager):
         profile.save()
         return profile,user
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def create_inactive_user(self, username, email, password, site, send_email=True):
         User = get_user_model()
         new_user = User.objects.create_user(username, email, password)
