@@ -5,8 +5,19 @@ from django.utils.translation import ugettext_lazy as _
 
 from registration.models import RegistrationProfile
 
+class RawMixin(object):
+  def formfield_for_dbfield(self, db_field, **kwargs):
+    if db_field.name in self.raw_id_fields:
+      kwargs.pop("request", None)
+      type = db_field.rel.__class__.__name__
+      if type == "ManyToOneRel":
+        kwargs['widget'] = VerboseForeignKeyRawIdWidget(db_field.rel, site)
+    elif type == "ManyToManyRel":
+        kwargs['widget'] = VerboseManyToManyRawIdWidget(db_field.rel, site)
+      return db_field.formfield(**kwargs)
+    return super(RawMixin, self).formfield_for_dbfield(db_field, **kwargs)
 
-class RegistrationAdmin(admin.ModelAdmin):
+class RegistrationAdmin(RawMixin,admin.ModelAdmin):
     actions = ['activate_users', 'resend_activation_email']
     list_display = ('user', 'expired')
     raw_id_fields = ['user']
