@@ -53,7 +53,6 @@ class RegistrationForm(forms.Form):
             name,domain = self.cleaned_data['email'].split('@')
             name = name.lower().replace('.','')
             for user in User.objects.filter(email__iendswith=domain):
-                print name,"\t", user.email.split('@')[0].lower().replace('.','')
                 if name == user.email.split('@')[0].lower().replace('.',''):                 
                     raise forms.ValidationError(e)
 
