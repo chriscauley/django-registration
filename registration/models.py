@@ -49,7 +49,7 @@ class RegistrationManager(models.Manager):
 
     def delete_expired_users(self):
         User = get_user_model()
-        for profile in self.filter(expires__lte=datetime_now()):
+        for profile in self.filter(expire_date__lte=datetime_now()):
             try:
                 user = profile.user
                 if not user.is_active:
