@@ -10,6 +10,7 @@ from django.views.generic.base import TemplateView
 from models import RegistrationProfile
 import views
 import auth_urls
+import datetime
 
 def resend_activation(target):
   def wrapper(request,*args,**kwargs):
@@ -27,7 +28,10 @@ def resend_activation(target):
             site = Site.objects.get_current()
           else:
             site = RequestSite(request)
-          RegistrationProfile.objects.create(user=user).send_activation_email(site)
+          profile,new = RegistrationProfile.objects.get_or_create(user=user)
+          profile.expire_date = datetime_now() + datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
+          profile.save()
+          profile.send_activation_email(site)
           return HttpResponseRedirect(request.path)
       except (model.DoesNotExist,IndexError):
         pass
