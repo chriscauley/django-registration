@@ -9,7 +9,7 @@ from .forms import RegistrationForm
 from .models import RegistrationProfile
 
 def register(request,form=RegistrationForm):
-    form = form(request,request.POST or None)
+    form = form(request)
     if form.is_valid():
         form.save()
         return HttpResponseRedirect(reverse('registration_complete'))
