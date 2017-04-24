@@ -8,11 +8,13 @@ from django.utils.translation import ugettext_lazy as _
 
 from .models import RegistrationProfile
 
+from lablackey.forms import RequestForm
+
 #! need to test settings
 # view https://docs.djangoproject.com/en/1.6/topics/testing/tools/#overriding-settings
 EXTRA_FIELDS = getattr(settings,"REGISTRATION_EXTRA_FIELDS",['password2'])
 
-class RegistrationForm(forms.Form):
+class RegistrationForm(RequestForm):
     """
     A form to create inactive users and create a registration profile. Uses the following settings:
 
@@ -35,12 +37,6 @@ class RegistrationForm(forms.Form):
         tos = forms.BooleanField(widget=forms.CheckboxInput,
                                  label=_(u'I have read and agree to the Terms of Service'),
                                  error_messages={'required': _("You must agree to the terms to register")})
-
-    def __init__(self,request,*args,**kwargs):
-        if not isinstance(request,HttpRequest):
-            raise ValueError("The RegistrationForm must take a request as it's first argument")
-        self.request = request
-        return super(RegistrationForm,self).__init__(*args,**kwargs)
 
     def clean_email(self):
         User = get_user_model()
