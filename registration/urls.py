@@ -6,6 +6,7 @@ from django.contrib.sites.models import Site
 from django.contrib.sites.requests import RequestSite
 from django.http import HttpResponseRedirect
 from django.views.generic.base import TemplateView
+from django.utils import timezone
 
 from models import RegistrationProfile
 import views
@@ -29,7 +30,7 @@ def resend_activation(target):
           else:
             site = RequestSite(request)
           profile,new = RegistrationProfile.objects.get_or_create(user=user)
-          profile.expire_date = datetime_now() + datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
+          profile.expire_date = timezone.now() + datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
           profile.save()
           profile.send_activation_email(site)
           return HttpResponseRedirect(request.path)
