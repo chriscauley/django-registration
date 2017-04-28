@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.contrib.sites.requests import RequestSite
+from django.core.urlresolvers import reverse
 from django import forms
 from django.http import HttpRequest
 from django.utils.translation import ugettext_lazy as _
@@ -12,7 +13,7 @@ from lablackey.forms import RequestForm
 
 #! need to test settings
 # view https://docs.djangoproject.com/en/1.6/topics/testing/tools/#overriding-settings
-EXTRA_FIELDS = getattr(settings,"REGISTRATION_EXTRA_FIELDS",['password2'])
+EXTRA_FIELDS = getattr(settings,"REGISTRATION_EXTRA_FIELDS",[])
 
 class RegistrationForm(RequestForm):
     """
@@ -28,11 +29,10 @@ class RegistrationForm(RequestForm):
     """
     required_css_class = 'required'
     _e = {'invalid': _("This value may contain only letters, numbers and @/./+/-/_ characters.")}
-    username = forms.RegexField(regex=r'^[\w.@+-]+$',max_length=30,label=_("Username"),error_messages=_e)
     email = forms.EmailField(label=_("E-mail"))
-    password1 = forms.CharField(widget=forms.PasswordInput,label=_("Password"))
-    if 'password2' in EXTRA_FIELDS: #! needs test
-        password2 = forms.CharField(widget=forms.PasswordInput,label=_("Password (again)"))
+    username = forms.RegexField(regex=r'^[\w.@+-]+$',max_length=30,label=_("Username"),error_messages=_e)
+    password = forms.CharField(widget=forms.PasswordInput,label=_("Password"))
+
     if 'tos' in EXTRA_FIELDS: #! needs test
         tos = forms.BooleanField(widget=forms.CheckboxInput,
                                  label=_(u'I have read and agree to the Terms of Service'),
@@ -49,7 +49,7 @@ class RegistrationForm(RequestForm):
             name,domain = self.cleaned_data['email'].split('@')
             name = name.lower().replace('.','')
             for user in User.objects.filter(email__iendswith=domain):
-                if name == user.email.split('@')[0].lower().replace('.',''):                 
+                if name == user.email.split('@')[0].lower().replace('.',''):
                     raise forms.ValidationError(e)
 
         if getattr(settings,"REGISTRATION_NO_FREE_EMAIL",False): #! needs test
@@ -70,11 +70,9 @@ class RegistrationForm(RequestForm):
             raise forms.ValidationError(_("A user with that username already exists."))
         return self.cleaned_data['username']
 
-    def clean_password2(self):
-        if 'password1' in self.cleaned_data and 'password2' in self.cleaned_data:
-            if self.cleaned_data['password1'] != self.cleaned_data['password2']:
-                raise forms.ValidationError(_("The two password fields didn't match."))
-        return self.cleaned_data.get('password2','')
+    def clean_password(self):
+        if len(self.cleaned_data.get('password',"")) < 8:
+            raise forms.ValidationError(_("Passwor must be at least 8 characters."))
 
     def save(self):
         d = self.cleaned_data
@@ -82,4 +80,5 @@ class RegistrationForm(RequestForm):
             site = Site.objects.get_current()
         else:
             site = RequestSite(request)
-        RegistrationProfile.objects.create_inactive_user(d['username'],d['email'],d['password1'],site)
+        RegistrationProfile.objects.create_inactive_user(d['username'],d['email'],d['password'],site)
+        self.success_url = reverse('registration_complete')
