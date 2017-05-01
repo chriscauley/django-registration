@@ -73,6 +73,7 @@ class RegistrationForm(RequestForm):
     def clean_password(self):
         if len(self.cleaned_data.get('password',"")) < 8:
             raise forms.ValidationError(_("Passwor must be at least 8 characters."))
+        return self.cleaned_data['password']
 
     def save(self):
         d = self.cleaned_data
